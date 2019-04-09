@@ -20,6 +20,8 @@ public class ReplyTextMessage implements ReplyNesFactory{
 	
 	public BaseMessage sendMsg(JSONObject obj) {
     	TextMessage text=JSONObject.toJavaObject(obj, TextMessage.class);
+    	text.setFromUserName(obj.getString("ToUserName"));
+    	text.setToUserName(obj.getString("FromUserName"));
     	text.setCreateTime(new Date().getTime());
 		return text;
 	}
