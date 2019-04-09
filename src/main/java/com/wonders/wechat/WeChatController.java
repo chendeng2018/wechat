@@ -10,6 +10,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang.StringUtils;
 import org.dom4j.DocumentException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,6 +35,7 @@ public class WeChatController {
 	private ReplyTextMessage replyTextMessage;
 	@Autowired
 	private ReplyArticleMessage replyArticleMessage;
+	private static Logger logger = LoggerFactory.getLogger(WeChatController.class);
 	//校验服务器
 	@GetMapping("/index.do")
 	public void check(HttpServletRequest req,HttpServletResponse res) throws IOException {
@@ -53,12 +56,14 @@ public class WeChatController {
 		PrintWriter out = res.getWriter();
 		 try {
 			JSONObject json = MessageUtil.xmlToJSON(req);
+			logger.info("json:"+json);
 		    String message=null;
 		    if(StringUtils.equals(MessageUtil.MESSAGE_TEXT, json.getString("MsgType"))) {
 		    	message=MessageUtil.textmsgToXml(replyTextMessage.sendMsg(json));
 		    }else if(StringUtils.equals(MessageUtil.MESSAGE_VOICE, json.getString("MsgType"))) {
 		    	message=MessageUtil.textmsgToXml(replyArticleMessage.sendMsg(json));
 		    }
+		    logger.info("message:"+message);
 		   out.write(message);
 			
 		} catch (DocumentException e) {
