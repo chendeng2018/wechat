@@ -11,10 +11,10 @@ import org.apache.commons.lang.StringUtils;
 * @date 2019年4月4日 
 */
 public class CheckUtil {
-  private static final String token="wechat";	
+  private static final String TOKEN="wechat";	
 	
   public static boolean checkSignature(String signature,String timestamp,String nonce) {
-	String[] arr=new String[] {token,timestamp,nonce};	
+	String[] arr=new String[] {TOKEN,timestamp,nonce};	
     Arrays.sort(arr);//排序
 	StringBuffer content=new StringBuffer();
 	for(int i=0,length=arr.length;i<length;i++) {

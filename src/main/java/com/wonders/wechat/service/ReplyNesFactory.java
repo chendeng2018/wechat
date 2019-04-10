@@ -11,6 +11,10 @@ import com.wonders.wechat.message.BaseMessage;
  * 类说明
  **/
 public interface ReplyNesFactory {
-	
+	/**
+	 * 
+	 * @param obj
+	 * @return
+	 */
 	public BaseMessage sendMsg(JSONObject obj);
 }

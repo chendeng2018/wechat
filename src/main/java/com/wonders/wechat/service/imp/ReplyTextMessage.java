@@ -17,12 +17,12 @@ import com.wonders.wechat.util.MessageUtil;
  **/
 @Service
 public class ReplyTextMessage implements ReplyNesFactory{
-	
+	@Override
 	public BaseMessage sendMsg(JSONObject obj) {
     	TextMessage text=JSONObject.toJavaObject(obj, TextMessage.class);
     	text.setFromUserName(obj.getString("ToUserName"));
     	text.setToUserName(obj.getString("FromUserName"));
-    	text.setCreateTime(new Date().getTime());
+    	text.setCreateTime(System.currentTimeMillis());
 		return text;
 	}
 
