@@ -62,20 +62,20 @@ public class WeChatController {
 		}
 	}
 
-	@GetMapping("/getToken.do")
-	@ResponseBody
+	//@GetMapping("/getToken.do")
+	//@ResponseBody
 	public AccessToken getToken() {
 		return messageUtil.getToken();
 	}
 
-	@GetMapping("/initMenu.do")
-	@ResponseBody
+	//@GetMapping("/initMenu.do")
+	//@ResponseBody
 	public String initMenu() {
 		return messageUtil.initMenu();
 	}
 
-	@GetMapping("/deleteMenu.do")
-	@ResponseBody
+	//@GetMapping("/deleteMenu.do")
+	//@ResponseBody
 	public Object deleteMenu() {
 		return messageUtil.deleteMenu();
 	}
@@ -86,8 +86,8 @@ public class WeChatController {
 	 * @throws Exception
 	 * 获取用户access_token 包含openid
 	 */
-	@GetMapping("/webToken.do")
-	@ResponseBody
+	//@GetMapping("/webToken.do")
+	//@ResponseBody
 	public String findDicInfo(@RequestParam String code) throws Exception {
 		String info=messageUtil.getWebToken(code);
 		logger.info("=============="+info);
