@@ -1,18 +1,24 @@
 package com.wonders.wechat.util;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.StringReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.Element;
-import org.dom4j.io.SAXReader;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -32,66 +38,107 @@ import com.wonders.wechat.menu.ParentButton;
 import com.wonders.wechat.menu.ViewButton;
 import com.wonders.wechat.message.BaseMessage;
 import com.wonders.wechat.message.TextMessage;
+import com.wonders.wechat.service.imp.ReplyArticleMessage;
+import com.wonders.wechat.service.imp.ReplyLinktMessage;
 
-/**  
-* 
-* @author chd 
-* @date 2019年4月4日 
-*/
+
+/**
+ * 
+ * @author chd
+ * @date 2019年4月4日
+ */
 @Component
 public class MessageUtil {
 	@Autowired
 	private RestTemplate restTemplate;
-	public static final String MESSAGE_TEXT="text";
-	public static final String MESSAGE_IMAGE="image";
-	public static final String MESSAGE_VOICE="voice";
-	public static final String MESSAGE_NEWS="news";
-	public static final String MESSAGE_LINK="link";
-	public static final String MESSAGE_EVENT ="event";
-    private static final String TOKENURL="https://api.weixin.qq.com/cgi-bin/token";
-    private static final String CREATE_MENU_URL="https://api.weixin.qq.com/cgi-bin/menu/create?access_token=ACCESS_TOKEN";
-    private static final String DELETE_MENU_URL="https://api.weixin.qq.com/cgi-bin/menu/delete?access_token=ACCESS_TOKEN";
-    @Value("${appid}")
-    private String appid;
-    @Value("${appsecret}")
-    private String secret;
-    
-	public  JSONObject xmlToJSON(HttpServletRequest req) throws IOException, DocumentException{
-		JSONObject obj=new JSONObject();
-		SAXReader reader=new SAXReader();
-		InputStream inputStream = req.getInputStream();
-		Document doc = reader.read(inputStream);
-		Element root = doc.getRootElement();
-		List<Element> list = root.elements();
-		for(Element e:list){
-			obj.put(e.getName(),e.getText());
+	@Autowired
+	private ReplyArticleMessage replyArticleMessage;
+	@Autowired
+	private ReplyLinktMessage replyLinkMessage;
+	public static final String MSGTYPE = "MsgType";
+	public static final String MESSAGE_TEXT = "text";
+	public static final String MESSAGE_IMAGE = "image";
+	public static final String MESSAGE_VOICE = "voice";
+	public static final String MESSAGE_NEWS = "news";
+	public static final String MESSAGE_LINK = "link";
+	public static final String MESSAGE_EVENT = "event";
+	/**扫码**/
+	public static final String MESSAGE_SCANCODE_PUSH = "scancode_push";
+	public static final String PIC_PHOTO_OR_ALBUM = "pic_photo_or_album";
+	private static final String TOKENURL = "https://api.weixin.qq.com/cgi-bin/token";
+	private static final String CREATE_MENU_URL = "https://api.weixin.qq.com/cgi-bin/menu/create?access_token=ACCESS_TOKEN";
+	private static final String DELETE_MENU_URL = "https://api.weixin.qq.com/cgi-bin/menu/delete?access_token=ACCESS_TOKEN";
+	private static final String WECHAT_ACCESS_TOKEN_URL="https://api.weixin.qq.com/sns/oauth2/access_token";
+	@Value("${appid}")
+	private String appid;
+	@Value("${appsecret}")
+	private String secret;
+
+	public JSONObject xmlToJSON(HttpServletRequest req) throws IOException, JDOMException {
+		String xml=IOUtils.toString(req.getInputStream());
+		SAXBuilder builder = new SAXBuilder();
+        Document document = builder.build(new StringReader(xml));
+        Element root = document.getRootElement();// 获得根节点
+        List<Element> list=root.getChildren();
+		Map childMap = null;
+		Map parentMap = new HashMap<>();
+		for (Element e : list) {
+			List<Element> childs = e.getChildren();
+			if (childs.size() > 1) {
+				childMap = new HashMap<>();
+				for (Element child : childs) {
+					childMap.put(child.getName(), child.getText());
+				}
+				parentMap.put(e.getName(), childMap);
+			} else {
+				parentMap.put(e.getName(), e.getText());
+			}
 		}
-		return obj;
+		return JSONObject.parseObject(JSONObject.toJSONString(parentMap));
 	}
-	
-	
-	public  String textmsgToXml(BaseMessage message) {
-    	XStream xstream=new XStream();
-    	xstream.processAnnotations(message.getClass());
-    	return xstream.toXML(message);
-    }
-	
-	 /**
-     * 根据指定文本内容构建<strong>文本</strong>响应消息
-     *
-     */
-    public TextMessage buildTextResponseMessage(JSONObject json, String content) {
-        TextMessage textResponseMessage = new TextMessage();
-        textResponseMessage.setContent(content);
-        textResponseMessage.setCreateTime(System.currentTimeMillis());
-        textResponseMessage.setFromUserName(json.getString("ToUserName"));
-        textResponseMessage.setToUserName(json.getString("FromUserName"));
-        textResponseMessage.setMsgType(MESSAGE_TEXT);
-        return textResponseMessage;
-    }
-	
-	
-	public  AccessToken getToken() {
+
+	public String textmsgToXml(BaseMessage message) {
+		XStream xstream = new XStream();
+		xstream.processAnnotations(message.getClass());
+		return xstream.toXML(message);
+	}
+
+	public String getXml(HttpServletRequest req) throws IOException, JDOMException{
+		JSONObject json = xmlToJSON(req);
+		String type = json.getString(MSGTYPE);
+		BaseMessage sendMsg = null;
+		if (StringUtils.equals(type, MESSAGE_TEXT) || StringUtils.equals(type, MESSAGE_VOICE)) {
+			    sendMsg = replyArticleMessage.sendMsg(json);
+		} else if (StringUtils.equals(type, MESSAGE_EVENT)) {
+			if (StringUtils.equals("subscribe", json.getString("Event"))) {
+				sendMsg = buildTextResponseMessage(json, "欢迎关注本公众号");
+			}
+		} else if (StringUtils.equals(type, MESSAGE_LINK)) {
+			sendMsg = replyLinkMessage.sendMsg(json);
+		} else {
+			sendMsg = buildTextResponseMessage(json, "抱歉，未能识别此类消息");
+		}
+		if(sendMsg==null) {
+			return null;
+		}
+		return textmsgToXml(sendMsg);
+	}
+
+	/**
+	 * 根据指定文本内容构建<strong>文本</strong>响应消息
+	 *
+	 */
+	public TextMessage buildTextResponseMessage(JSONObject json, String content) {
+		TextMessage textResponseMessage = new TextMessage();
+		textResponseMessage.setContent(content);
+		textResponseMessage.setCreateTime(System.currentTimeMillis());
+		textResponseMessage.setFromUserName(json.getString("ToUserName"));
+		textResponseMessage.setToUserName(json.getString("FromUserName"));
+		textResponseMessage.setMsgType(MESSAGE_TEXT);
+		return textResponseMessage;
+	}
+
+	public AccessToken getToken() {
 		HttpHeaders headers = new HttpHeaders();
 		MultiValueMap<String, String> postParameters = new LinkedMultiValueMap<String, String>();
 		postParameters.add("grant_type", "client_credential");
@@ -102,59 +149,130 @@ public class MessageUtil {
 		AccessToken token = restTemplate.postForEntity(TOKENURL, requestEntity, AccessToken.class).getBody();
 		return token;
 	}
-	
+
 	public String initMenu() {
-		ClickButton click1=new ClickButton("天气预报");
-		click1.setType("click");
+		ClickButton click1 = new ClickButton("扫码");
+		click1.setType("scancode_push");
 		click1.setKey("11");
-		
-		ClickButton click2=new ClickButton("公交查询");
+
+		ClickButton click2 = new ClickButton("公交查询");
 		click2.setType("click");
-		click2.setKey("公交查询");
-		
-		ViewButton view1=new ViewButton("搜索");
+		click2.setKey("22");
+		ClickButton click3 = new ClickButton("拍照");
+		click3.setType("pic_photo_or_album");
+		click3.setKey("333");
+
+		ViewButton view1 = new ViewButton("搜索");
 		view1.setUrl("http://www.soso.com/");
 		view1.setType("view");
-		
-		ViewButton view2=new ViewButton("百度");
+
+		ViewButton view2 = new ViewButton("百度");
 		view2.setUrl("http://www.baidu.com/");
 		view2.setType("view");
-		
-		ViewButton view3=new ViewButton("一网");
+
+		ViewButton view3 = new ViewButton("一网");
 		view3.setUrl("http://zwdtpt.sh.gov.cn");
 		view3.setType("view");
-		
-		ViewButton view4=new ViewButton("我的消息");
-		view4.setUrl("http://zwdtpt.sh.gov.cn");
+          //演示网页授权 返回code 
+		ViewButton view4 = new ViewButton("我的消息");
+		view4.setUrl("https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx2a1474cc8ab3d204&redirect_uri=http%3A%2F%2Fn24m412475.qicp.vip%2Fwechat%2FwebToken.do&response_type=code&scope=snsapi_userinfo&state=123#wechat_redirect");
 		view4.setType("view");
-		
-		
-		ParentButton par1=new ParentButton("生活助手");
-		par1.setSub_button(new Button[] {click1,click2});
-		
-		ParentButton par2=new ParentButton("搜索天下");
-		par2.setSub_button(new Button[] {view1,view2});
-		
-		ParentButton par3=new ParentButton("用户中心");
-		par3.setSub_button(new Button[] {view3,view4});
-		Menu menu=new Menu();
-		menu.setButton(new Button[] {par1,par2,par3});
-		System.out.println("menu:-----------------"+JSONObject.toJSONString(menu));
-		AccessToken token=getToken();
-		JSONObject obj=restTemplate.postForObject(CREATE_MENU_URL.replace("ACCESS_TOKEN", token.getAccess_token()), new HttpEntity<Menu>(menu), JSONObject.class);
-		
+
+		ParentButton par1 = new ParentButton("生活助手");
+		par1.setSub_button(new Button[] { click1, click2 ,click3});
+
+		ParentButton par2 = new ParentButton("搜索天下");
+		par2.setSub_button(new Button[] { view1, view2 });
+
+		ParentButton par3 = new ParentButton("用户中心");
+		par3.setSub_button(new Button[] { view3, view4 });
+		Menu menu = new Menu();
+		menu.setButton(new Button[] { par1, par2, par3 });
+		System.out.println("menu:-----------------" + JSONObject.toJSONString(menu));
+		AccessToken token = getToken();
+		JSONObject obj = restTemplate.postForObject(CREATE_MENU_URL.replace("ACCESS_TOKEN", token.getAccess_token()),
+				new HttpEntity<Menu>(menu), JSONObject.class);
+
 		return obj.toJSONString();
 	}
-	//删除菜单
+
+	// 删除菜单
 	/**
 	 * http请求方式：GET
-     * https://api.weixin.qq.com/cgi-bin/menu/delete?access_token=ACCESS_TOKEN
-     * 调用此接口会删除默认菜单及全部个性化菜单
+	 * https://api.weixin.qq.com/cgi-bin/menu/delete?access_token=ACCESS_TOKEN
+	 * 调用此接口会删除默认菜单及全部个性化菜单
 	 */
-	public  JSONObject deleteMenu() {
-		AccessToken token=getToken();
-		JSONObject obj=restTemplate.postForObject(CREATE_MENU_URL.replace("ACCESS_TOKEN", token.getAccess_token()), null, JSONObject.class);
+	public JSONObject deleteMenu() {
+		AccessToken token = getToken();
+		JSONObject obj = restTemplate.postForObject(DELETE_MENU_URL.replace("ACCESS_TOKEN", token.getAccess_token()),
+				null, JSONObject.class);
 		return obj;
 	}
 	
+	public String getWebToken(String code) {
+		String urlString = WECHAT_ACCESS_TOKEN_URL+"?appid=" + appid + "&secret=" + secret + "&code=" + code + "&grant_type=authorization_code";
+		StringBuffer entityStringBuffer = new StringBuffer();
+		HttpURLConnection urlCon;
+		OutputStreamWriter osw = null;
+		String result="";
+		try {
+			URL url = new URL(urlString);
+			urlCon = (HttpURLConnection) url.openConnection();
+			urlCon.setRequestMethod("POST");
+			urlCon.setDoOutput(true);
+			osw = new OutputStreamWriter(urlCon.getOutputStream(), "UTF-8");
+			osw.flush();
+			osw.close();
+			if (urlCon.getResponseCode() != 200)
+				throw new RuntimeException();
+			if (urlCon.getResponseCode() == 200) {
+				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlCon.getInputStream(), "UTF-8"), 8 * 1024);
+				String line = null;
+				while ((line = bufferedReader.readLine()) != null) {
+					entityStringBuffer.append(line);
+				}
+				bufferedReader.close();
+				result = entityStringBuffer.toString();
+				return result;
+			}
+		} catch (Exception e) {
+			 e.printStackTrace();
+		}
+		return null;
+	}
+	public static void main(String[] args) throws JDOMException, IOException {
+		String xml="<xml><ToUserName><![CDATA[gh_30cc94073552]]></ToUserName>\n" + 
+				"<FromUserName><![CDATA[o_CKi53gU_Gxxydu7W-3NISfpsrQ]]></FromUserName>\n" + 
+				"<CreateTime>1554970199</CreateTime>\n" + 
+				"<MsgType><![CDATA[event]]></MsgType>\n" + 
+				"<Event><![CDATA[scancode_push]]></Event>\n" + 
+				"<EventKey><![CDATA[11]]></EventKey>\n" + 
+				"<ScanCodeInfo><ScanType><![CDATA[qrcode]]></ScanType>\n" + 
+				"<ScanResult><![CDATA[http://zwdtpt.sh.gov.cn/zwdtSW/bsfw/showDetail.do?ST_ID=SH00PT_60366]]></ScanResult>\n" + 
+				"</ScanCodeInfo>\n" + 
+				"</xml>";
+		SAXBuilder builder = new SAXBuilder();
+        Document document = builder.build(new StringReader(xml));
+        Element root = document.getRootElement();// 获得根节点
+        List<Element> list=root.getChildren();
+		Map childMap = null;
+		Map parentMap = new HashMap<>();
+		for (Element e : list) {
+			List<Element> childs = e.getChildren();
+			if (childs.size() > 1) {
+				childMap = new HashMap<>();
+				for (Element child : childs) {
+					childMap.put(child.getName(), child.getText());
+				}
+				parentMap.put(e.getName(), childMap);
+			} else {
+				parentMap.put(e.getName(), e.getText());
+			}
+		}
+		
+		System.out.println(JSONObject.parseObject(JSONObject.toJSONString(parentMap)));
+		
+	}
+	 
+
 }

@@ -31,7 +31,7 @@ public class ReplyArticleMessage implements ReplyNesFactory{
 		String content=obj.getString("Recognition")==null?obj.getString("Content"):obj.getString("Recognition");
 		Item item=getCont(content);
 		if(StringUtils.isBlank(item.getTitle())) {
-			return messageUtil.buildTextResponseMessage(obj,"暂未开通该功能");
+			return messageUtil.buildTextResponseMessage(obj,"抱歉，暂未开通该功能");
 		}
 		ArticleMessage article=new ArticleMessage();
 		List<Item> articles =new ArrayList<>();
