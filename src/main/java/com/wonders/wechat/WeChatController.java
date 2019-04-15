@@ -1,7 +1,6 @@
 package com.wonders.wechat;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -35,47 +34,45 @@ public class WeChatController {
 
 	// 校验服务器
 	@GetMapping("/index.do")
-	public void check(@RequestParam String signature ,@RequestParam String nonce, 
+	@ResponseBody
+	public String check(@RequestParam String signature ,@RequestParam String nonce, 
 			@RequestParam String timestamp,@RequestParam String echostr,HttpServletResponse res) throws IOException {
-		PrintWriter out = res.getWriter();
 		boolean checkSignature = CheckUtil.checkSignature(signature, timestamp, nonce);
-		if (checkSignature) {
-			out.write(echostr);
+		if (!checkSignature) {
+			return null;
 		}
+		return echostr;
 	}
 
 	@PostMapping("/index.do")
-	public void getMessage(HttpServletRequest req, HttpServletResponse res) throws IOException {
+	@ResponseBody
+	public String getMessage(HttpServletRequest req, HttpServletResponse res) throws IOException {
 		req.setCharacterEncoding("UTF-8");
 		res.setCharacterEncoding("UTF-8");
-		PrintWriter out = res.getWriter();
+		String message =StringUtils.EMPTY;
 		try {
-			String message =messageUtil.getXml(req);
-			logger.info("message:" + message);
-			if(StringUtils.isNotBlank(message)) {
-				out.write(message);
-			}
+			message=messageUtil.getXml(req);
+			//logger.info("message:" + message);
 		} catch (Exception e) {
 			e.printStackTrace();
-		} finally {
-			out.close();
-		}
+		} 
+		return message;
 	}
 
-	//@GetMapping("/getToken.do")
-	//@ResponseBody
+	@GetMapping("/getToken.do")
+	@ResponseBody
 	public AccessToken getToken() {
 		return messageUtil.getToken();
 	}
 
-	//@GetMapping("/initMenu.do")
-	//@ResponseBody
+	@GetMapping("/initMenu.do")
+	@ResponseBody
 	public String initMenu() {
 		return messageUtil.initMenu();
 	}
 
-	//@GetMapping("/deleteMenu.do")
-	//@ResponseBody
+	@GetMapping("/deleteMenu.do")
+	@ResponseBody
 	public Object deleteMenu() {
 		return messageUtil.deleteMenu();
 	}
@@ -86,8 +83,8 @@ public class WeChatController {
 	 * @throws Exception
 	 * 获取用户access_token 包含openid
 	 */
-	//@GetMapping("/webToken.do")
-	//@ResponseBody
+	@GetMapping("/webToken.do")
+	@ResponseBody
 	public String findDicInfo(@RequestParam String code) throws Exception {
 		String info=messageUtil.getWebToken(code);
 		logger.info("=============="+info);

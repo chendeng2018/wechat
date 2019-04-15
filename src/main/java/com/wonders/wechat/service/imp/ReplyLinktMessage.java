@@ -1,12 +1,9 @@
 package com.wonders.wechat.service.imp;
 
-import java.util.Date;
-
 import org.springframework.stereotype.Service;
 
 import com.alibaba.fastjson.JSONObject;
 import com.wonders.wechat.message.BaseMessage;
-import com.wonders.wechat.message.LinkMessage;
 import com.wonders.wechat.message.TextMessage;
 import com.wonders.wechat.service.ReplyNesFactory;
 import com.wonders.wechat.util.MessageUtil;

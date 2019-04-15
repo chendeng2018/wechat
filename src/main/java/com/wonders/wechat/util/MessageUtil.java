@@ -1,12 +1,7 @@
 package com.wonders.wechat.util;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.StringReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -210,35 +205,16 @@ public class MessageUtil {
 	}
 	
 	public String getWebToken(String code) {
-		String urlString = WECHAT_ACCESS_TOKEN_URL+"?appid=" + appid + "&secret=" + secret + "&code=" + code + "&grant_type=authorization_code";
-		StringBuffer entityStringBuffer = new StringBuffer();
-		HttpURLConnection urlCon;
-		OutputStreamWriter osw = null;
-		String result="";
-		try {
-			URL url = new URL(urlString);
-			urlCon = (HttpURLConnection) url.openConnection();
-			urlCon.setRequestMethod("POST");
-			urlCon.setDoOutput(true);
-			osw = new OutputStreamWriter(urlCon.getOutputStream(), "UTF-8");
-			osw.flush();
-			osw.close();
-			if (urlCon.getResponseCode() != 200)
-				throw new RuntimeException();
-			if (urlCon.getResponseCode() == 200) {
-				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlCon.getInputStream(), "UTF-8"), 8 * 1024);
-				String line = null;
-				while ((line = bufferedReader.readLine()) != null) {
-					entityStringBuffer.append(line);
-				}
-				bufferedReader.close();
-				result = entityStringBuffer.toString();
-				return result;
-			}
-		} catch (Exception e) {
-			 e.printStackTrace();
-		}
-		return null;
+		HttpHeaders headers = new HttpHeaders();
+		MultiValueMap<String, String> postParameters = new LinkedMultiValueMap<String, String>();
+		postParameters.add("appid", appid);
+		postParameters.add("secret", secret);
+		postParameters.add("code", code);
+		postParameters.add("grant_type", "grant_type");
+		HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<MultiValueMap<String, String>>(
+				postParameters, headers);
+		String obj = restTemplate.postForObject(WECHAT_ACCESS_TOKEN_URL,requestEntity, String.class);
+		return obj;
 	}
 	public static void main(String[] args) throws JDOMException, IOException {
 		String xml="<xml><ToUserName><![CDATA[gh_30cc94073552]]></ToUserName>\n" + 
