@@ -14,6 +14,8 @@ import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -68,9 +70,11 @@ public class MessageUtil {
 	private String appid;
 	@Value("${appsecret}")
 	private String secret;
-
+	private static Logger logger = LoggerFactory.getLogger(MessageUtil.class);
+	
 	public JSONObject xmlToJSON(HttpServletRequest req) throws IOException, JDOMException {
-		String xml=IOUtils.toString(req.getInputStream());
+		String xml=IOUtils.toString(req.getInputStream(),"UTF-8");
+		logger.info("xml-----------:"+xml);
 		SAXBuilder builder = new SAXBuilder();
         Document document = builder.build(new StringReader(xml));
         Element root = document.getRootElement();// 获得根节点
