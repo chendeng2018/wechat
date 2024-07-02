@@ -1,0 +1,85 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>加减法测试</title>  
+    <!-- 引入Bootstrap CSS -->  
+    <link href="#{webRoot}/plugin/bootstrap/css/bootstrap.min.css" rel="stylesheet">  
+    <style>  
+        .result-icon {  
+            display: none;  
+            font-size: 2em;  
+        }  
+        .result-icon.correct {  
+            color: green;  
+        }  
+        .result-icon.incorrect {  
+            color: red;  
+        }  
+    </style>  
+</head>  
+<body>  
+    <div class="container mt-5">  
+        <h1>加减法测试</h1>  
+        <div id="mathQuestions">  
+            <!-- 题目将在这里动态生成 -->  
+        </div>  
+        <button type="button" class="btn btn-primary mt-3" onclick="generateQuestions()">随机出题</button>  
+        <!-- <button type="button" class="btn btn-secondary mt-3" onclick="clearForm()">清空</button>   -->
+        <button type="button" class="btn btn-success mt-3" onclick="verifyAnswers()">提交</button>  
+    </div>  
+  
+    <!-- 引入Bootstrap JS 和 jQuery（Bootstrap依赖于jQuery） -->  
+    <script src="#{webRoot}/common/js/jquery.min.js"></script>  
+    <script src="#{webRoot}/plugin/bootstrap/js/bootstrap.min.js" ></script>  
+  
+    <script>  
+        function generateQuestions() {  
+            const questionsDiv = $('#mathQuestions');  
+            questionsDiv.empty();  
+  
+            for (let i = 0; i < 10; i++) {  
+                const row = $('<div>').addClass('row my-2');  
+                for (let j = 0; j < 5; j++) {  
+                    const num1 = Math.floor(Math.random() * 100) % 100; // 两位数的随机数  
+                    const num2 = Math.floor(Math.random() * 100) % 100;  
+                    const operator = num1 > num2 ? '-' : '+';  
+                    const result = operator === '+' ? num1 + num2 : num1 - num2;  
+  
+                    const inputGroup = $('<div>').addClass('input-group col-2');  
+                    const inputDiv = $('<div>').addClass('input-group-prepend');  
+                    inputDiv.append($('<span>').addClass('input-group-text').text(`${num1} ${operator} ${num2} =`));  
+  
+                    const input = $('<input>').attr('type', 'text').attr('class', 'form-control').attr('data-result', result);  
+                    const resultIcon = $('<span>').addClass('input-group-append result-icon');  
+  
+                    inputGroup.append(inputDiv, input, resultIcon);  
+                    row.append(inputGroup);  
+                }  
+                questionsDiv.append(row);  
+            }  
+        }  
+  
+        function verifyAnswers() {  
+            $('input[type="text"]').each(function() {  
+                const $input = $(this);  
+                const expectedResult = parseInt($input.data('result'), 10);  
+                const userInput = parseInt($input.val().trim(), 10);  
+  
+                if (isNaN(userInput) || userInput !== expectedResult) {  
+                    $input.next('.result-icon').text('✖').addClass('incorrect').show();  
+                } else {  
+                    $input.next('.result-icon').text('✓').addClass('correct').show();  
+                }
+           });  
+       }
+        function clearForm() {  
+            $('#mathQuestions input[type="text"]').val('').next('.result-icon').hide().removeClass('correct incorrect').text('');  
+        }  
+  
+        // 初始生成题目  
+        generateQuestions();  
+    </script>  
+</body>  
+</html>
